@@ -222,7 +222,7 @@ namespace lsp
         {
             LSP_STATUS_ASSERT(os->write_ascii("\t<key>"));
             LSP_STATUS_ASSERT(os->write_ascii(key));
-            LSP_STATUS_ASSERT(os->writeln_ascii("<key>"));
+            LSP_STATUS_ASSERT(os->writeln_ascii("</key>"));
             return STATUS_OK;
         };
 
@@ -252,6 +252,7 @@ namespace lsp
             LSP_STATUS_ASSERT(os.writeln_ascii("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
             LSP_STATUS_ASSERT(os.writeln_ascii("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"));
             LSP_STATUS_ASSERT(os.writeln_ascii("<plist version=\"1.0\">"));
+            LSP_STATUS_ASSERT(os.writeln_ascii("<dict>"));
             {
                 // Generate version string
                 LSPString version;
@@ -260,6 +261,14 @@ namespace lsp
                     manifest->version.minor,
                     manifest->version.micro) < 0)
                     return STATUS_NO_MEM;
+
+                LSP_STATUS_ASSERT(write_key(&os, "CFBundleIdentifier"));
+                {
+                    LSPString bundle_id;
+                    if (bundle_id.fmt_ascii("in.lsp-plug.vst3.%s", manifest->artifact) < 0)
+                        return STATUS_NO_MEM;
+                    LSP_STATUS_ASSERT(write_escaped_string(&os, &bundle_id));
+                }
 
                 LSP_STATUS_ASSERT(write_key(&os, "CFBundleName"));
                 LSP_STATUS_ASSERT(write_escaped_string(&os, manifest->artifact));
@@ -293,6 +302,7 @@ namespace lsp
                 LSP_STATUS_ASSERT(write_key(&os, "NSHumanReadableCopyright"));
                 LSP_STATUS_ASSERT(write_escaped_string(&os, manifest->copyright));
             }
+            LSP_STATUS_ASSERT(os.writeln_ascii("</dict>"));
             LSP_STATUS_ASSERT(os.writeln_ascii("</plist>"));
 
             return STATUS_OK;

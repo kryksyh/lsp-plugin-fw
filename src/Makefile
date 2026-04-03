@@ -274,7 +274,7 @@ else ifeq ($(PLATFORM),Windows)
   VST3_LDFLAGS           := -Wl,--kill-at
 else ifeq ($(PLATFORM),MacOS)
   VST3_ARCH              := MacOS
-  VST3_EXT               := 
+  VST3_EXT               := .dylib
 else
   VST3_ARCH              := $(shell uname -m)-${shell uname -s | tr '[:upper:]' '[:lower:]'}
   VST3_EXT               := $(LIBRARY_EXT)
@@ -1624,7 +1624,10 @@ install_vst3: vst3
 	$(if $(findstring MacOS, $(PLATFORM)), \
 	  $($(HOST)UTL_VST3_MODINFO) -i "$(DESTDIR)$(VST3_LIBDIR)/Contents/Info.plist" -p "$(DESTDIR)$(VST3_LIBDIR)/Contents/PkgInfo" \
     )
-	$(INSTALL) $(ARTIFACT_LIB_VST3) "$(DESTDIR)$(VST3_LIBDIR)/Contents/${VST3_ARCH}/"
+	$(if $(findstring MacOS, $(PLATFORM)), \
+	  $(INSTALL) $(ARTIFACT_LIB_VST3) "$(DESTDIR)$(VST3_LIBDIR)/Contents/${VST3_ARCH}/$(PLUGIN_SHARED_NAME)", \
+	  $(INSTALL) $(ARTIFACT_LIB_VST3) "$(DESTDIR)$(VST3_LIBDIR)/Contents/${VST3_ARCH}/" \
+	)
 
 install_launcher: launcher
 	echo "Install launcher"
@@ -1774,7 +1777,10 @@ package_vst3: vst3 $(BIN_PACKAGE)
 	$(if $(findstring MacOS, $(PLATFORM)), \
 	  $($(HOST)UTL_VST3_MODINFO) -i "$(BUILDDIR)/$(BIN_PKG_DIR)/$(VST3_LIBDIR)/Contents/Info.plist" -p "$(BUILDDIR)/$(BIN_PKG_DIR)/$(VST3_LIBDIR)/Contents/PkgInfo" \
     )
-	$(INSTALL) $(ARTIFACT_LIB_VST3) "$(BUILDDIR)/$(BIN_PKG_DIR)/$(VST3_LIBDIR)/Contents/${VST3_ARCH}/"
+	$(if $(findstring MacOS, $(PLATFORM)), \
+	  $(INSTALL) $(ARTIFACT_LIB_VST3) "$(BUILDDIR)/$(BIN_PKG_DIR)/$(VST3_LIBDIR)/Contents/${VST3_ARCH}/$(PLUGIN_SHARED_NAME)", \
+	  $(INSTALL) $(ARTIFACT_LIB_VST3) "$(BUILDDIR)/$(BIN_PKG_DIR)/$(VST3_LIBDIR)/Contents/${VST3_ARCH}/" \
+	)
 	$(foreach target,$(BIN_PACKAGE_VST3), \
 	    $(MAKE) -C "$($(patsubst package_%,%,$(target))_PATH)" install DESTDIR="$(BUILDDIR)/$(BIN_PKG_DIR)"; \
 	)

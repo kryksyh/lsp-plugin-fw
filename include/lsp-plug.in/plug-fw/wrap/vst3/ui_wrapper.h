@@ -71,6 +71,8 @@ namespace lsp
                 Steinberg::Linux::IRunLoop         *pRunLoop;               // Run loop interface
                 Steinberg::Linux::ITimerHandler    *pTimer;                 // Timer handler
                 Steinberg::Linux::IEventHandler    *pEventHandler;          // Event handler
+            #elif defined(PLATFORM_MACOSX)
+                void                               *pSyncTimer;             // macOS dispatch timer for sync_ui
             #endif /* VST_USE_RUNLOOP_IFACE */
 
             protected:
