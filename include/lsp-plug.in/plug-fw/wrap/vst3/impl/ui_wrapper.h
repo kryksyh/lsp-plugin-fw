@@ -42,6 +42,10 @@
 
 #include <steinberg/vst3.h>
 
+#ifdef PLATFORM_MACOSX
+    #include <dispatch/dispatch.h>
+#endif
+
 namespace lsp
 {
     namespace vst3
@@ -64,6 +68,8 @@ namespace lsp
             pRunLoop            = NULL;
             pTimer              = new vst3::PlatformTimer(this);
             pEventHandler       = new vst3::EventHandler(this);
+        #elif defined(PLATFORM_MACOSX)
+            pSyncTimer          = NULL;
         #endif /* VST_USE_RUNLOOP_IFACE */
         }
 
@@ -75,6 +81,8 @@ namespace lsp
             unregister_run_loop();
             safe_release(pTimer);
             safe_release(pEventHandler);
+        #elif defined(PLATFORM_MACOSX)
+            unregister_run_loop();
         #endif /* VST_USE_RUNLOOP_IFACE */
 
             // Remove self from synchronization list of UI wrapper
@@ -709,6 +717,13 @@ namespace lsp
                 pRunLoop->unregisterTimer(pTimer);
             }
             safe_release(pRunLoop);
+        #elif defined(PLATFORM_MACOSX)
+            if (pSyncTimer != NULL)
+            {
+                dispatch_source_cancel(static_cast<dispatch_source_t>(pSyncTimer));
+                dispatch_release(static_cast<dispatch_source_t>(pSyncTimer));
+                pSyncTimer = NULL;
+            }
         #endif /* VST_USE_RUNLOOP_IFACE */
         }
 
@@ -740,6 +755,27 @@ namespace lsp
                 lsp_trace("RunLoop ptr=%p register timer ptr=%p", pRunLoop, pTimer);
                 pRunLoop->registerTimer(pTimer, 1000 / UI_FRAMES_PER_SECOND);
             }
+        #elif defined(PLATFORM_MACOSX)
+            // Cancel any existing timer
+            if (pSyncTimer != NULL)
+            {
+                dispatch_source_cancel(static_cast<dispatch_source_t>(pSyncTimer));
+                dispatch_release(static_cast<dispatch_source_t>(pSyncTimer));
+                pSyncTimer = NULL;
+            }
+
+            // Create a GCD timer to call sync_ui() periodically on the main queue
+            uint64_t interval_ns = (1000000000ULL / UI_FRAMES_PER_SECOND);
+            dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+            dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, 0), interval_ns, interval_ns / 10);
+
+            IUISync *sync = this;
+            dispatch_source_set_event_handler(timer, ^{
+                sync->sync_ui();
+            });
+
+            dispatch_resume(timer);
+            pSyncTimer = timer;
         #endif /* VST_USE_RUNLOOP_IFACE */
         }
 
